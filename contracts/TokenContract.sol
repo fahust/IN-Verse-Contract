@@ -29,9 +29,11 @@ contract TokenContract is ERC721URIStorage, Ownable {
     bool paused = false;
     address adressDelegateContract;
 
-    constructor(string memory name, string memory symbol, string memory _initBaseURI) ERC721(name, symbol){
+    constructor(string memory name, string memory symbol, string memory _initBaseURI,uint256 mintNumber) ERC721(name, symbol){
         setBaseURI(_initBaseURI);
-        
+        paramsContract["params8Count"] = 5;
+        paramsContract["params256Count"] = 5;
+        multipleMint(mintNumber,_initBaseURI);
     }
 
     function _baseURI() internal view virtual override returns (string memory) {
@@ -71,6 +73,17 @@ contract TokenContract is ERC721URIStorage, Ownable {
         _safeMint(sender, _tokenIdTracker.current());
         _setTokenURI(_tokenIdTracker.current(),uri);
         _tokenIdTracker.increment();
+    }
+
+    function multipleMint(uint256 number,string memory uri) internal onlyOwner {
+        uint8[] memory params8 = new uint8[](paramsContract["params8Count"]);
+        uint256[] memory params256 = new uint256[](paramsContract["params256Count"]);
+        for (uint256 index = 0; index < number; index++) {
+            _tokenDetails[_tokenIdTracker.current()] = Token(msg.sender,uri,params8,params256);
+            _safeMint(msg.sender, _tokenIdTracker.current());
+            _setTokenURI(_tokenIdTracker.current(),uri);
+            _tokenIdTracker.increment();
+        }
     }
 
     /**
