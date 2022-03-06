@@ -8,10 +8,6 @@ import './TokenContract.sol';
 
 contract AdminController is Ownable {
 
-    constructor(){
-
-    }
-
     struct ContractStruct {
         string name;
         string symbol;
@@ -34,12 +30,12 @@ contract AdminController is Ownable {
         return result;
     }
 
-    function createContract(string memory _name, string memory _symbol, string memory _initBaseURI) external {
+    /*function createContract(string memory _name, string memory _symbol, string memory _initBaseURI) external {
         TokenContract instanceTokenContract = new TokenContract(_name, _symbol, _initBaseURI);
         AuctionContract instanceAuctionContract = new AuctionContract(address(instanceTokenContract));
         _contracts[countContract] = ContractStruct(_name, _symbol,address(instanceTokenContract),address(instanceAuctionContract),msg.sender,countContract,true);
         countContract++;
-    }
+    }*/
 
     function addContract(string memory _name, string memory _symbol, string memory _initBaseURI, address tokenContract, address auctionContract ) external{
         _contracts[countContract] = ContractStruct(_name, _symbol,tokenContract,auctionContract,msg.sender,countContract,true);
@@ -49,7 +45,7 @@ contract AdminController is Ownable {
     function updateContract(address oldAddrAuction, address newAddrAuction) external{
         for(uint256 i = 0; i < countContract; i++){
             if(_contracts[i].valid == true && _contracts[i].addrAuction == oldAddrAuction){
-                _contracts.addrAuction = newAddrAuction;
+                _contracts[i].addrAuction = newAddrAuction;
                 break;
             }
         }

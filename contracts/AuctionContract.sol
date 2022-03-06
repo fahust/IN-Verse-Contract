@@ -35,9 +35,8 @@ contract AuctionContract is Ownable {
         addressContractToken = _addressContract;
         paramsContract["bid"] = 100000000000000000;//set minimum price
         paramsContract["startAuction"] = 0;//start auction date
-        paramsContract["params8Count"] = 5;
-        paramsContract["params256Count"] = 5;
         paramsContract["timeAuction"] = 60 minutes;
+        paramsContract["numberTokenEndAuction"] = 1;
     }
 
     /**
@@ -86,14 +85,12 @@ contract AuctionContract is Ownable {
     }
 
     function lazyMint(string memory uri) payable external{
-        uint8[] memory params8 = new uint8[](paramsContract["params8Count"]);
-        uint256[] memory params256 = new uint256[](paramsContract["params256Count"]);
         TokenContract contrat = TokenContract(addressContractToken);
+        uint256 params8Count = contrat.getParamsContract("params8Count");
+        uint256 params256Count = contrat.getParamsContract("params256Count");
+        uint8[] memory params8 = new uint8[](params8Count);
+        uint256[] memory params256 = new uint256[](params256Count);
         contrat.mint(msg.sender, uri, params8, params256);
-    }
-
-    function multipleMint() external onlyOwner {
-
     }
 
     function getBidderDetails(uint256 bidderId) external onlyOwner view returns (Bidder memory){
@@ -154,12 +151,12 @@ contract AuctionContract is Ownable {
     And we send royalties percent at address setted
      */
     function endAuction() external onlyOwner {
-        require(block.timestamp>=(paramsContract["startAuction"]+paramsContract["timeAuction"]),"Auction is finished");
+        require(block.timestamp>=(paramsContract["startAuction"]+paramsContract["timeAuction"]),"Auction is not finished");
         require(endedAndTransfered==false,"collection selled");
         TokenContract contrat = TokenContract(addressContractToken);
         for(uint256 i = 0; i <= countBidder; i++){
             if(lastBidder == _bidders[i].addressBidder){
-                for (uint256 iToken = 0; iToken < 10; iToken++) {
+                for (uint256 iToken = 0; iToken < paramsContract["numberTokenEndAuction"]; iToken++) {
                     contrat.transfer(contrat.getOwnerOf(iToken), _bidders[i].addressBidder, iToken);
                 }
             }else{
@@ -174,10 +171,12 @@ contract AuctionContract is Ownable {
     Pay royalties
     */
     function payRoyalties() internal {
-        uint256 percent = address(this).balance/countAddressRoyalties;
-        for (uint8 iRoyalties = 0; iRoyalties <= countAddressRoyalties; iRoyalties++) {
-            if(_addressRoyalties[iRoyalties].valid == true){
-                payable(_addressRoyalties[iRoyalties].addressRoyalties).transfer(percent);
+        if(countAddressRoyalties>0){
+            uint256 percent = address(this).balance/countAddressRoyalties;
+            for (uint8 iRoyalties = 0; iRoyalties < countAddressRoyalties; iRoyalties++) {
+                if(_addressRoyalties[iRoyalties].valid == true){
+                    payable(_addressRoyalties[iRoyalties].addressRoyalties).transfer(percent);
+                }
             }
         }
     }
