@@ -33,7 +33,7 @@ contract TokenContract is ERC721URIStorage, Ownable {
         setBaseURI(_initBaseURI);
         paramsContract["params8Count"] = 5;
         paramsContract["params256Count"] = 5;
-        multipleMint(mintNumber,_initBaseURI);
+        //multipleMint(mintNumber);
     }
 
     function _baseURI() internal view virtual override returns (string memory) {
@@ -75,13 +75,18 @@ contract TokenContract is ERC721URIStorage, Ownable {
         _tokenIdTracker.increment();
     }
 
-    function multipleMint(uint256 number,string memory uri) internal onlyOwner {
-        uint8[] memory params8 = new uint8[](paramsContract["params8Count"]);
-        uint256[] memory params256 = new uint256[](paramsContract["params256Count"]);
+    /*function lazyMint(address sender){
+        require(sender == owner(),"tu n'es pas le créateur");
+        require(msg.sender == auctionContract);
+    }*/
+
+    function multipleMint(uint256 number) external onlyOwner {
+        //uint8[] memory params8 = new uint8[](paramsContract["params8Count"]);
+        //uint256[] memory params256 = new uint256[](paramsContract["params256Count"]);
         for (uint256 index = 0; index < number; index++) {
-            _tokenDetails[_tokenIdTracker.current()] = Token(msg.sender,uri,params8,params256);
+            //_tokenDetails[_tokenIdTracker.current()] = Token(msg.sender,uri,params8,params256);
             _safeMint(msg.sender, _tokenIdTracker.current());
-            _setTokenURI(_tokenIdTracker.current(),uri);
+            //_setTokenURI(_tokenIdTracker.current(),uri);
             _tokenIdTracker.increment();
         }
     }

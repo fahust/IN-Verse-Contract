@@ -17,46 +17,56 @@ contract AuctionContract is Ownable {
         address addressBidder;
         uint256 bid;
     }
+
+    struct Auction {
+        address lastBidder;
+        address owner;
+        address addressContractToken;
+        uint256 countBidder;
+        uint8 countAddressRoyalties;
+        bool endedAndTransfered;
+        bool paused;
+        bool valid;
+        string name;
+        mapping( uint8 => RoyaltiesAddresses ) _addressRoyalties;
+        mapping( uint256 => Bidder ) _bidders;
+        mapping( string => uint ) paramsContract;//Allows great scalability, you can add or remove as many variables as you want
+    }
+
+    function createAuction(address addressToken) external {
+        Auction storage auction = _auctions[countAuction];
+        _auctions[countAuction].paramsContract["bid"] = 100000000000000000;//set minimum price
+        _auctions[countAuction].paramsContract["startAuction"] = 0;//start auction date
+        _auctions[countAuction].paramsContract["timeAuction"] = 60 minutes;
+        _auctions[countAuction].paramsContract["numberTokenEndAuction"] = 1;
+        _auctions[countAuction].owner = msg.sender;
+        _auctions[countAuction].valid = true;
+        _auctions[countAuction].addressContractToken = addressToken;
+        
+        countAuction++;
+    }
     
     event Bidders(address indexed addressBidder, uint256 bid);
+    event Auctions(uint256 indexed id, address owner);
 
-    mapping( uint8 => RoyaltiesAddresses ) private _addressRoyalties;
-    mapping( uint256 => Bidder ) private _bidders;
-    mapping( string => uint ) paramsContract;//Allows great scalability, you can add or remove as many variables as you want
-    address addressContractToken;
-    address lastBidder;
-    uint256 countBidder;
-    uint8 countAddressRoyalties;
-    bool endedAndTransfered;
-    bool paused = false;
+    mapping( uint256 => Auction ) _auctions;
+    uint256 countAuction;
 
 
-    constructor(address _addressContract) {
-        addressContractToken = _addressContract;
-        paramsContract["bid"] = 100000000000000000;//set minimum price
-        paramsContract["startAuction"] = 0;//start auction date
-        paramsContract["timeAuction"] = 60 minutes;
-        paramsContract["numberTokenEndAuction"] = 1;
+    constructor() {
     }
 
     /**
     Get value of one element of array parameter of contract  
     */
-    function getParamsContract(string memory keyParams) external view returns (uint256){
-        return paramsContract[keyParams];
+    function getParamsContract(uint256 a, string memory keyParams) external view returns (uint256){
+        return _auctions[a].paramsContract[keyParams];
     }
 
-    /**
-    Recover the details of a token by passing its id
-     */
-    function getTokenDetails(uint256 tokenId) external view returns  (TokenContract.Token memory){
-        TokenContract contrat = TokenContract(addressContractToken);
-        return contrat.getTokenDetails(tokenId);
-    }
-
-    function getAllToken() external view returns (TokenContract.Token[] memory){
-        TokenContract contrat = TokenContract(addressContractToken);
-        return contrat.getAllToken();
+    modifier OwnerContract(uint256 a){
+        require(msg.sender == _auctions[a].owner,"Your are not the auction owner");
+        require(_auctions[a].valid == true,"Auction is not valid");
+        _;
     }
 
     /**
@@ -64,55 +74,53 @@ contract AuctionContract is Ownable {
     Verify that the bidder has sent more ETH than the initial and the last auction
     Check that the auction has started and is not yet finished
      */
-    function bidding() payable external {
-        require(msg.value>paramsContract["bid"],"Require more ETH for bidding");
-        require(paramsContract["startAuction"]!=0,"Auction not started");
-        require(block.timestamp<(paramsContract["startAuction"]+paramsContract["timeAuction"]),"Auction is finished");
-        paramsContract["bid"] = msg.value;
-        _bidders[countBidder] = Bidder(msg.sender,msg.value);
-        lastBidder = msg.sender;
+    function bidding(uint256 a) payable external {
+        require(msg.value>_auctions[a].paramsContract["bid"],"Require more ETH for bidding");
+        require(_auctions[a].paramsContract["startAuction"]!=0,"Auction not started");
+        require(block.timestamp<(_auctions[a].paramsContract["startAuction"]+_auctions[a].paramsContract["timeAuction"]),"Auction is finished");
+        //refunded if an bidding already exists of this user 
+        for (uint256 index = 0; index < _auctions[a].countBidder; index++) {
+            if(_auctions[a]._bidders[index].addressBidder == msg.sender){
+                payable(_auctions[a]._bidders[index].addressBidder).transfer(_auctions[a]._bidders[index].bid);
+                break;
+            }
+        }
+        _auctions[a].paramsContract["bid"] = msg.value;
+        _auctions[a]._bidders[_auctions[a].countBidder] = Bidder(msg.sender,msg.value);
+        _auctions[a].lastBidder = msg.sender;
         emit Bidders(msg.sender,msg.value);
-        countBidder++;
+        _auctions[a].countBidder++;
     }
 
-    function getAllBidders() external view returns (Bidder[] memory){
-        Bidder[] memory result = new Bidder[](countBidder);
-        for(uint256 i = 0; i < countBidder; i++){
-            Bidder storage _bidder = _bidders[i];
+    function getAllBidders(uint256 a) external OwnerContract(a) view returns (Bidder[] memory){
+        Bidder[] memory result = new Bidder[](_auctions[a].countBidder);
+        for(uint256 i = 0; i < _auctions[a].countBidder; i++){
+            Bidder storage _bidder = _auctions[a]._bidders[i];
             result[i] = _bidder;
         }
         return result;
     }
 
-    function lazyMint(string memory uri) payable external{
-        TokenContract contrat = TokenContract(addressContractToken);
-        uint256 params8Count = contrat.getParamsContract("params8Count");
-        uint256 params256Count = contrat.getParamsContract("params256Count");
-        uint8[] memory params8 = new uint8[](params8Count);
-        uint256[] memory params256 = new uint256[](params256Count);
-        contrat.mint(msg.sender, uri, params8, params256);
-    }
-
-    function getBidderDetails(uint256 bidderId) external onlyOwner view returns (Bidder memory){
-        return _bidders[bidderId];
+    function getBidderDetails(uint256 a, uint256 bidderId) external OwnerContract(a) view returns (Bidder memory){
+        return _auctions[a]._bidders[bidderId];
     }
     
     /**
     Create addresses to which to send royalties and the percentages they will receive
      */
-    function setRoyaltiesAdress(address _address) external onlyOwner {
-        _addressRoyalties[countAddressRoyalties] = RoyaltiesAddresses(_address,true);
-        countAddressRoyalties++;
+    function setRoyaltiesAdress(uint256 a, address _address) external OwnerContract(a) {
+        _auctions[a]._addressRoyalties[_auctions[a].countAddressRoyalties] = RoyaltiesAddresses(_address,true);
+        _auctions[a].countAddressRoyalties++;
     }
 
     /**
     Remove addresses to which to send royalties and the percentages they will receive
      */
-    function removeRoyaltiesAdress(address _address) external onlyOwner {
-        for (uint8 iRoyalties = 0; iRoyalties <= countAddressRoyalties; iRoyalties++) {
-            if(_addressRoyalties[iRoyalties].addressRoyalties == _address){
-                _addressRoyalties[iRoyalties].valid = false;
-                countAddressRoyalties--;
+    function removeRoyaltiesAdress(uint256 a, address _address) external OwnerContract(a) {
+        for (uint8 iRoyalties = 0; iRoyalties <= _auctions[a].countAddressRoyalties; iRoyalties++) {
+            if(_auctions[a]._addressRoyalties[iRoyalties].addressRoyalties == _address){
+                _auctions[a]._addressRoyalties[iRoyalties].valid = false;
+                _auctions[a].countAddressRoyalties--;
             }
         }
     }
@@ -120,29 +128,30 @@ contract AuctionContract is Ownable {
     /**
     Update address of token
     */
-    function setAddressContract(address _addressContract) external onlyOwner {
-        addressContractToken = _addressContract;
+    function setAddressContract(uint256 a, address _addressContract) external OwnerContract(a) {
+        _auctions[a].addressContractToken = _addressContract;
     }
 
     /**
     get address of token
     */
-    function getAddressContract(address _addressContract) external onlyOwner view returns(address) {
-        return addressContractToken;
+    function getAddressContract(uint256 a) external OwnerContract(a) view returns(address) {
+        return _auctions[a].addressContractToken;
     }
 
     /**
     Update dynamic array of params of this contract
      */
-    function setParamsContract(string memory keyParams, uint valueParams) external onlyOwner {
-        paramsContract[keyParams] = valueParams;
+    function setParamsContract(uint256 a, string memory keyParams, uint valueParams) external OwnerContract(a) {
+        _auctions[a].paramsContract[keyParams] = valueParams;
     }
 
     /**
     Start the auction now !
      */
-    function startAuction() external onlyOwner {
-        paramsContract["startAuction"] = block.timestamp;
+    function startAuction(uint256 a) external OwnerContract(a) {
+        require(_auctions[a].endedAndTransfered==false,"collection selled");
+        _auctions[a].paramsContract["startAuction"] = block.timestamp;
     }
 
     /**
@@ -150,32 +159,32 @@ contract AuctionContract is Ownable {
     We send the collection to the winner of the auction
     And we send royalties percent at address setted
      */
-    function endAuction() external onlyOwner {
-        require(block.timestamp>=(paramsContract["startAuction"]+paramsContract["timeAuction"]),"Auction is not finished");
-        require(endedAndTransfered==false,"collection selled");
-        TokenContract contrat = TokenContract(addressContractToken);
-        for(uint256 i = 0; i <= countBidder; i++){
-            if(lastBidder == _bidders[i].addressBidder){
-                for (uint256 iToken = 0; iToken < paramsContract["numberTokenEndAuction"]; iToken++) {
-                    contrat.transfer(contrat.getOwnerOf(iToken), _bidders[i].addressBidder, iToken);
+    function endAuction(uint256 a) external OwnerContract(a) {
+        require(block.timestamp>=(_auctions[a].paramsContract["startAuction"]+_auctions[a].paramsContract["timeAuction"]),"Auction is not finished");
+        require(_auctions[a].endedAndTransfered==false,"collection selled");
+        TokenContract contrat = TokenContract(_auctions[a].addressContractToken);
+        for(uint256 i = 0; i <= _auctions[a].countBidder; i++){
+            if(_auctions[a].lastBidder == _auctions[a]._bidders[i].addressBidder){
+                for (uint256 iToken = 0; iToken < _auctions[a].paramsContract["numberTokenEndAuction"]; iToken++) {
+                    contrat.transfer(contrat.getOwnerOf(iToken), _auctions[a]._bidders[i].addressBidder, iToken);
                 }
             }else{
-                payable(_bidders[i].addressBidder).transfer(_bidders[i].bid);
+                payable(_auctions[a]._bidders[i].addressBidder).transfer(_auctions[a]._bidders[i].bid);
             }
         }
-        endedAndTransfered = true;
-        payRoyalties();
+        _auctions[a].endedAndTransfered = true;
+        payRoyalties(a);
     }
 
     /**
     Pay royalties
     */
-    function payRoyalties() internal {
-        if(countAddressRoyalties>0){
-            uint256 percent = address(this).balance/countAddressRoyalties;
-            for (uint8 iRoyalties = 0; iRoyalties < countAddressRoyalties; iRoyalties++) {
-                if(_addressRoyalties[iRoyalties].valid == true){
-                    payable(_addressRoyalties[iRoyalties].addressRoyalties).transfer(percent);
+    function payRoyalties(uint256 a) internal {
+        if(_auctions[a].countAddressRoyalties>0){
+            uint256 percent = address(this).balance/_auctions[a].countAddressRoyalties;
+            for (uint8 iRoyalties = 0; iRoyalties < _auctions[a].countAddressRoyalties; iRoyalties++) {
+                if(_auctions[a]._addressRoyalties[iRoyalties].valid == true){
+                    payable(_auctions[a]._addressRoyalties[iRoyalties].addressRoyalties).transfer(percent);
                 }
             }
         }
@@ -184,25 +193,14 @@ contract AuctionContract is Ownable {
     /**
     Temporarily lock the contract
      */
-    function pause(bool _state) external onlyOwner {
-        paused = _state;
+    function pause(uint256 a, bool _state) external onlyOwner {
+        _auctions[a].paused = _state;
     }
 
-    function kill() external onlyOwner {
+    /*function kill() external onlyOwner {
         require(block.timestamp<=(paramsContract["startAuction"]+paramsContract["timeAuction"]),"Auction is not finished");
         address payable addr = payable(address(owner()));
         selfdestruct(addr);
-    }
-
-    /**
-    Handling of funds, just in case
-     */
-    /*function withdraw() external byOwner {
-        payable(msg.sender).transfer(address(this).balance);
-    }
-
-    function deposit(uint256 amount) payable external byOwner {
-        require(msg.value == amount);
     }*/
 
 }
