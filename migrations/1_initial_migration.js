@@ -9,7 +9,7 @@ module.exports = async function (deployer) {
   await deployer.deploy(TokenContract,"test","TST","uri",1);
   let TokenContractInstance = await TokenContract.deployed();
   
-  await deployer.deploy(AuctionContract,TokenContractInstance.address);
-  let AuctionContractInstance = await AuctionContract.deployed();
+  await deployer.deploy(AuctionContract);
+  let AuctionControllerInstance = await AuctionContract.deployed();
   
 };

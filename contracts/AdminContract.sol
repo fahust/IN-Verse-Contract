@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 
 import '@openzeppelin/contracts/access/Ownable.sol';
 import './AuctionContract.sol';
+import './AuctionController.sol';
 import './TokenContract.sol';
 
 contract AdminController is Ownable {
@@ -59,7 +60,7 @@ contract AdminController is Ownable {
         }
     }
 
-    function pauseAllContracts(bool pause) external onlyOwner {
+    /*function pauseAllContracts(bool pause) external onlyOwner {
         for (uint256 index = 0; index < countContract; index++) {
             if(_contracts[index].valid==true){
                 AuctionContract _auctionContrat = AuctionContract(_contracts[index].addrAuction);
@@ -68,7 +69,7 @@ contract AdminController is Ownable {
                 _tokenContract.pause(pause);
             }
         }
-    }
+    }*/
 
     /*function pauseOneContracts(bool pause) external onlyOwner {
         for (uint256 index = 0; index < countContract; index++) {
