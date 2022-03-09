@@ -1,5 +1,5 @@
 const AdminController = artifacts.require("AdminController");
-const AuctionContract = artifacts.require("AuctionContract");
+const AccountContract = artifacts.require("AccountContract");
 const TokenContract = artifacts.require("TokenContract");
 
 module.exports = async function (deployer) {
@@ -9,7 +9,7 @@ module.exports = async function (deployer) {
   await deployer.deploy(TokenContract,"test","TST","uri",1);
   let TokenContractInstance = await TokenContract.deployed();
   
-  await deployer.deploy(AuctionContract);
-  let AuctionControllerInstance = await AuctionContract.deployed();
+  await deployer.deploy(AccountContract);
+  let AuctionControllerInstance = await AccountContract.deployed();
   
 };
