@@ -3,58 +3,46 @@
 pragma solidity ^0.8.0;
 
 import './TokenContract.sol';
+import './Struct.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 
-contract AuctionContract is Ownable {
+contract AuctionContract is Ownable, Struct {
 
+    mapping( uint256 => Auction ) _auctions;
+    uint256 countAuction;
+    
+    event Bidders(address indexed addressBidder, uint256 bid);
+    event Auctions(uint256 indexed id, address owner);
 
-    struct RoyaltiesAddresses {
-        address addressRoyalties;
-        bool valid;
-    }
-
-    struct Bidder {
-        address addressBidder;
-        uint256 bid;
-    }
-
-    struct Auction {
-        address lastBidder;
-        address owner;
-        address addressContractToken;
-        uint256 countBidder;
-        uint8 countAddressRoyalties;
-        bool endedAndTransfered;
-        bool paused;
-        bool valid;
-        string name;
-        mapping( uint8 => RoyaltiesAddresses ) _addressRoyalties;
-        mapping( uint256 => Bidder ) _bidders;
-        mapping( string => uint ) paramsContract;//Allows great scalability, you can add or remove as many variables as you want
-    }
-
-    function createAuction(address addressToken) external {
+    function createAuction() internal returns(uint256) {
         Auction storage auction = _auctions[countAuction];
-        _auctions[countAuction].paramsContract["bid"] = 100000000000000000;//set minimum price
+        _auctions[countAuction].paramsContract["minBid"] = 100000000000000000;//set minimum price
         _auctions[countAuction].paramsContract["startAuction"] = 0;//start auction date
         _auctions[countAuction].paramsContract["timeAuction"] = 60 minutes;
         _auctions[countAuction].paramsContract["numberTokenEndAuction"] = 1;
         _auctions[countAuction].owner = msg.sender;
         _auctions[countAuction].valid = true;
-        _auctions[countAuction].addressContractToken = addressToken;
-        
         countAuction++;
+        return countAuction-1;
     }
-    
-    event Bidders(address indexed addressBidder, uint256 bid);
-    event Auctions(uint256 indexed id, address owner);
 
-    mapping( uint256 => Auction ) _auctions;
-    uint256 countAuction;
-
-
-    constructor() {
+    /**
+    On set le tableau de token dans l'auction avec un tableau directement, plus rapide ,plus opti
+     */
+    function setTokenInAuction(uint256 a, uint256[] memory arrayToken) external OwnerContract(a) {
+        _auctions[a]._tokenInAuction = arrayToken;
     }
+
+    /**
+    Pour récuperer le tableau coter front, le mêttre a jour coter front puis renvoyer vers solidity quand on modif
+     */
+    function getTokenInAuctionArray(uint256 a) external view returns(uint256[] memory) {
+        return _auctions[a]._tokenInAuction;
+    }
+
+    /*function getTokenInAuction() external view returns(TokenContract.Token) {
+        return _auctions[a]._tokenInAuction;
+    }*/
 
     /**
     Get value of one element of array parameter of contract  
@@ -75,34 +63,13 @@ contract AuctionContract is Ownable {
     Check that the auction has started and is not yet finished
      */
     function bidding(uint256 a) payable external {
-        require(msg.value>_auctions[a].paramsContract["bid"],"Require more ETH for bidding");
+        require(msg.value>_auctions[a].paramsContract["minBid"]&&msg.value>_auctions[a].lastBidder.bid,"Require more ETH for bidding");
         require(_auctions[a].paramsContract["startAuction"]!=0,"Auction not started");
         require(block.timestamp<(_auctions[a].paramsContract["startAuction"]+_auctions[a].paramsContract["timeAuction"]),"Auction is finished");
-        //refunded if an bidding already exists of this user 
-        for (uint256 index = 0; index < _auctions[a].countBidder; index++) {
-            if(_auctions[a]._bidders[index].addressBidder == msg.sender){
-                payable(_auctions[a]._bidders[index].addressBidder).transfer(_auctions[a]._bidders[index].bid);
-                break;
-            }
-        }
-        _auctions[a].paramsContract["bid"] = msg.value;
-        _auctions[a]._bidders[_auctions[a].countBidder] = Bidder(msg.sender,msg.value);
-        _auctions[a].lastBidder = msg.sender;
+        //refunded previous bidder
+        payable(_auctions[a].lastBidder.addressBidder).transfer(_auctions[a].lastBidder.bid);
+        _auctions[a].lastBidder = Bidder(msg.sender,msg.value);
         emit Bidders(msg.sender,msg.value);
-        _auctions[a].countBidder++;
-    }
-
-    function getAllBidders(uint256 a) external OwnerContract(a) view returns (Bidder[] memory){
-        Bidder[] memory result = new Bidder[](_auctions[a].countBidder);
-        for(uint256 i = 0; i < _auctions[a].countBidder; i++){
-            Bidder storage _bidder = _auctions[a]._bidders[i];
-            result[i] = _bidder;
-        }
-        return result;
-    }
-
-    function getBidderDetails(uint256 a, uint256 bidderId) external OwnerContract(a) view returns (Bidder memory){
-        return _auctions[a]._bidders[bidderId];
     }
     
     /**
@@ -163,14 +130,8 @@ contract AuctionContract is Ownable {
         require(block.timestamp>=(_auctions[a].paramsContract["startAuction"]+_auctions[a].paramsContract["timeAuction"]),"Auction is not finished");
         require(_auctions[a].endedAndTransfered==false,"collection selled");
         TokenContract contrat = TokenContract(_auctions[a].addressContractToken);
-        for(uint256 i = 0; i <= _auctions[a].countBidder; i++){
-            if(_auctions[a].lastBidder == _auctions[a]._bidders[i].addressBidder){
-                for (uint256 iToken = 0; iToken < _auctions[a].paramsContract["numberTokenEndAuction"]; iToken++) {
-                    contrat.transfer(contrat.getOwnerOf(iToken), _auctions[a]._bidders[i].addressBidder, iToken);
-                }
-            }else{
-                payable(_auctions[a]._bidders[i].addressBidder).transfer(_auctions[a]._bidders[i].bid);
-            }
+        for (uint256 iToken = 0; iToken < _auctions[a]._tokenInAuction.length; iToken++) {
+            contrat.transfer(contrat.getOwnerOf(_auctions[a]._tokenInAuction[iToken]), _auctions[a].lastBidder.addressBidder, _auctions[a]._tokenInAuction[iToken]);
         }
         _auctions[a].endedAndTransfered = true;
         payRoyalties(a);
@@ -181,7 +142,7 @@ contract AuctionContract is Ownable {
     */
     function payRoyalties(uint256 a) internal {
         if(_auctions[a].countAddressRoyalties>0){
-            uint256 percent = address(this).balance/_auctions[a].countAddressRoyalties;
+            uint256 percent = _auctions[a].lastBidder.bid/_auctions[a].countAddressRoyalties;
             for (uint8 iRoyalties = 0; iRoyalties < _auctions[a].countAddressRoyalties; iRoyalties++) {
                 if(_auctions[a]._addressRoyalties[iRoyalties].valid == true){
                     payable(_auctions[a]._addressRoyalties[iRoyalties].addressRoyalties).transfer(percent);
@@ -196,12 +157,6 @@ contract AuctionContract is Ownable {
     function pause(uint256 a, bool _state) external onlyOwner {
         _auctions[a].paused = _state;
     }
-
-    /*function kill() external onlyOwner {
-        require(block.timestamp<=(paramsContract["startAuction"]+paramsContract["timeAuction"]),"Auction is not finished");
-        address payable addr = payable(address(owner()));
-        selfdestruct(addr);
-    }*/
 
 }
 

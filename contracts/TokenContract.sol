@@ -4,13 +4,10 @@ pragma solidity ^0.8.0;
 
 import '@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
-import '@openzeppelin/contracts/utils/Counters.sol';
-import './AuctionContract.sol';
+import "erc721a/contracts/ERC721A.sol";
 
-contract TokenContract is ERC721URIStorage, Ownable {
+contract TokenContract is ERC721A, Ownable {
     using Strings for uint256;
-    using Counters for Counters.Counter;
-    Counters.Counter private _tokenIdTracker;
     
     /*
     Object of Token
@@ -18,8 +15,7 @@ contract TokenContract is ERC721URIStorage, Ownable {
     struct Token {
         address addrOwner;
         string uri;
-        uint8[] params8;
-        uint256[] params256;
+        string url;
     }
 
     mapping( string => uint ) paramsContract;
@@ -27,12 +23,15 @@ contract TokenContract is ERC721URIStorage, Ownable {
     string public baseURI;
     string public baseExtension = ".json";
     bool paused = false;
+    bool valid = true;
     address adressDelegateContract;
+    uint256 countToken;
 
-    constructor(string memory name, string memory symbol, string memory _initBaseURI,uint256 mintNumber) ERC721(name, symbol){
+    event Mints(uint256 indexed id, address minter);
+
+    constructor(string memory name, string memory symbol, string memory _initBaseURI,uint256 mintNumber) ERC721A(name, symbol){
         setBaseURI(_initBaseURI);
-        paramsContract["params8Count"] = 5;
-        paramsContract["params256Count"] = 5;
+        valid = true;
         //multipleMint(mintNumber);
     }
 
@@ -68,11 +67,11 @@ contract TokenContract is ERC721URIStorage, Ownable {
     /**
     Mint a token with parameter send in function argument 
      */
-    function mint(address sender, string memory uri, uint8[] memory params8, uint256[] memory params256) external byDelegate {
-        _tokenDetails[_tokenIdTracker.current()] = Token(sender,uri,params8,params256);
-        _safeMint(sender, _tokenIdTracker.current());
-        _setTokenURI(_tokenIdTracker.current(),uri);
-        _tokenIdTracker.increment();
+    function mint(address sender, string memory uri, string memory url) external byDelegate {
+        _tokenDetails[countToken] = Token(sender,uri,url);
+        _safeMint(sender, 1);
+        //_setTokenURI(countToken,uri);
+        countToken++;
     }
 
     /*function lazyMint(address sender){
@@ -80,22 +79,20 @@ contract TokenContract is ERC721URIStorage, Ownable {
         require(msg.sender == auctionContract);
     }*/
 
-    function multipleMint(uint256 number) external onlyOwner {
-        //uint8[] memory params8 = new uint8[](paramsContract["params8Count"]);
-        //uint256[] memory params256 = new uint256[](paramsContract["params256Count"]);
-        for (uint256 index = 0; index < number; index++) {
-            //_tokenDetails[_tokenIdTracker.current()] = Token(msg.sender,uri,params8,params256);
+    function multipleMint(uint256 quantity) external onlyOwner {
+        _safeMint(msg.sender, quantity);
+        countToken+=quantity;
+        /*for (uint256 index = 0; index < number; index++) {
             _safeMint(msg.sender, _tokenIdTracker.current());
-            //_setTokenURI(_tokenIdTracker.current(),uri);
             _tokenIdTracker.increment();
-        }
+        }*/
     }
 
     /**
     Safe transfer one token to another address
      */
     function transfer(address from, address to ,uint256 tokenId) external byDelegate {
-        _safeTransfer(from, to, tokenId, "");
+        safeTransferFrom(from, to, tokenId);
     }
 
     /**
@@ -128,8 +125,8 @@ contract TokenContract is ERC721URIStorage, Ownable {
     }
 
     function getAllToken() external view returns (Token[] memory){
-        Token[] memory result = new Token[](_tokenIdTracker.current());
-        for(uint256 i = 0; i < _tokenIdTracker.current(); i++){
+        Token[] memory result = new Token[](countToken);
+        for(uint256 i = 0; i < countToken; i++){
             Token storage _token = _tokenDetails[i];
             result[i] = _token;
         }
@@ -153,6 +150,10 @@ contract TokenContract is ERC721URIStorage, Ownable {
      */
     function burn(uint256 tokenId) external byDelegate {
         _burn(tokenId);
+    }
+
+    function getValid() external view returns (bool) {
+        return valid;
     }
 
 }

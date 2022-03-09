@@ -11,7 +11,9 @@
     "openzeppelin-solidity": "4.5.0",
     "truffle-hdwallet-provider": "^1.0.17"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "erc721a": "^3.0.0"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

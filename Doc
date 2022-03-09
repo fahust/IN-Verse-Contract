@@ -1,1 +1,17 @@
 truffle migrate --network development
+truffle test
+
+
+- On créer un account depuis la sdk vers AccountContract.sol avec son adress (on ne peut pas créer deux compte avec la même address)
+- on peut a partir de la créer des collections :
+    -la sdk vérifie l'account
+    -la sdk créer la collection en créant un TokenContract.sol
+    -la sdk ajoute la collection a l'account dans AccountContract.sol
+- On peut aussi créer des auctions :
+    -la sdk vérifie l'account
+    -la sdk créer l'auction en tant que struct AUCTION, et map cet nouvelle struct
+- A partir de la chaque struct auction est paramètrable :
+    -On peut ajouter des destinataires royalties et leur % de fees
+    -On peut set des tokens avec un array, la meilleur solutions pour éviter boucles et frais de gaz serait d'envoyer directement le tableau depuis le front qui lui ce prérempli avec la fonction getTokenInAuction
+    -On peut rajouter des roles, 3 type prédifini (MINTER, EDITOR, PAUSER)
+    -Mettre une date de start/fin (EDITOR ET ADMIN ONLY)
