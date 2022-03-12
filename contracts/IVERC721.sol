@@ -16,6 +16,7 @@ contract TokenContract is ERC721A, Ownable {
         address addrOwner;
         string uri;
         string url;
+        uint256 price;
     }
 
     mapping( string => uint ) paramsContract;
@@ -26,6 +27,10 @@ contract TokenContract is ERC721A, Ownable {
     bool valid = true;
     address adressDelegateContract;
     uint256 countToken;
+    uint256 baseCollectionPrice;
+    uint256[] tokenLocked;
+    uint256[] tokenSelled;
+    string contractURI;
 
     event Mints(uint256 indexed id, address minter);
 
@@ -33,6 +38,23 @@ contract TokenContract is ERC721A, Ownable {
         setBaseURI(_initBaseURI);
         valid = true;
         //multipleMint(mintNumber);
+    }
+
+    ///@dev for Opensea metadata
+    function contractURI() public view returns (string memory) {
+        return contractURI;
+    }
+
+    ///@dev set metadata opensea
+    function setContractURI(string memory _contractURI) external {
+        contractURI = _contractURI;
+    }
+
+    function purchase(uint256 idToken) external payable {
+        uint256 currentPrice = _tokenDetails[idToken].price==0?baseCollectionPrice:_tokenDetails[idToken].price;
+        require(currentPrice!=0,"Price is not setted");
+        require(msg.value>=currentPrice,"Not enought value sended");
+
     }
 
     function _baseURI() internal view virtual override returns (string memory) {
@@ -57,16 +79,12 @@ contract TokenContract is ERC721A, Ownable {
         _;
     }
 
-    /**
-    Temporarily lock the contract
-     */
+    ///@dev Temporarily lock the contract
     function pause(bool _state) external onlyOwner {
         paused = _state;
     }
 
-    /**
-    Mint a token with parameter send in function argument 
-     */
+    ///@dev Mint a token with parameter send in function argument 
     function mint(address sender, string memory uri, string memory url) external byDelegate {
         _tokenDetails[countToken] = Token(sender,uri,url);
         _safeMint(sender, 1);
