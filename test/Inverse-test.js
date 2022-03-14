@@ -1,8 +1,7 @@
 
 
 const TokenContract = artifacts.require("TokenContract");
-const AuctionController = artifacts.require("AuctionController");
-const AccountContract = artifacts.require("AccountContract");
+const AuctionContract = artifacts.require("AuctionContract");
 
 var addressToken;
 
@@ -17,7 +16,7 @@ contract("TokenContract", async accounts => {
     });*/
     it("multiple mint 10", async () =>{
         let instance = await  TokenContract.deployed();
-        await instance.multipleMint(1000,{from:account_one,gasPrice: 0, gas:3000000})
+        await instance.multipleMint(100,{from:account_one,gasPrice: 0, gas:3000000})
     })
     //eth.getBlock('latest')
     it("balance token of", async () =>{
@@ -29,12 +28,12 @@ contract("TokenContract", async accounts => {
 
                         
 
-            contract("AccountContract", async accounts => {
+            contract("AuctionContract", async accounts => {
                 const account_one = accounts[0];
                 const account_two = accounts[1];
                 const amount = 10;
                 /*it("should put 10000 MetaCoin in the first account", () =>
-                    AuctionController.deployed()
+                    AuctionContract.deployed()
                     .then(instance => instance.getBalance.call(accounts[0]))
                     .then(balance => {
                         assert.equal(
@@ -46,14 +45,14 @@ contract("TokenContract", async accounts => {
                 );*/
 
                 /*it("multiple mint 10", async () =>{//1 ça passe, 10 c'est long , 100 c'est impossible
-                    let instance = await  AuctionController.deployed();
+                    let instance = await  AuctionContract.deployed();
                     await instance.multipleMint(10,"",{from:account_one})
                 });*/
 
 
 
                 /*it("create auction", async () => {
-                    let instance = await  AuctionController.deployed();
+                    let instance = await  AuctionContract.deployed();
                     await instance.createAuction({from:account_one})
                     let inst = await instance.getAuctionContract(0,{from:account_one})
                     auctionContract = new web3.eth.Contract(AuctionContract.abi, inst);
@@ -61,7 +60,7 @@ contract("TokenContract", async accounts => {
 
                 console.log('addr token : ',addressToken)
 
-                it("create account", async () => {
+                /*it("create account", async () => {
                     let instance = await  AccountContract.deployed();
                     await instance.createAccount({from:account_one})
                 });
@@ -147,7 +146,7 @@ contract("TokenContract", async accounts => {
                     await instance.endAuction(0,{from:account_one})
                 });
 
-                
+                */
 
                 
 
